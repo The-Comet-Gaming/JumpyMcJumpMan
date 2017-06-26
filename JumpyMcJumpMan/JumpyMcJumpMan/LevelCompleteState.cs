@@ -34,7 +34,7 @@ namespace JumpyMcJumpMan
                 //presses (incase the key was held down from the last state
                 if (oldState.IsKeyDown(Keys.Enter) == false)
                 {
-                    AIE.StateManager.ChangeState("GAME");
+                    AIE.StateManager.ChangeState("LEVEL2");
                 }
             }
 

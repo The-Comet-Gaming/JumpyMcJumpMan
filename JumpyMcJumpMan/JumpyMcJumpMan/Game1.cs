@@ -50,13 +50,15 @@ namespace JumpyMcJumpMan
         Texture2D fireTexture = null;
 
         TiledMap map = null;
-        TiledMap level1Background = null;
-        TiledMap backgound = null;
+        TiledMap background = null;
+        TiledMap level2Map = null;
+        TiledMap level2Background = null;
         TiledTileLayer collisionLayer;
 
         int score = 0;
         int lives = 3;
         int megaHealth = 0;
+        int currentLevel = 1;
 
         public int ScreenHeight
         {
@@ -123,6 +125,7 @@ namespace JumpyMcJumpMan
             AIE.StateManager.CreateState("MAINMENU", new MainMenuState());
             AIE.StateManager.CreateState("HOW2PLAYMENU", new How2PlayMenuState());
             AIE.StateManager.CreateState("GAME", new GameState());
+            AIE.StateManager.CreateState("LEVEL2", new GameState());
             AIE.StateManager.CreateState("LEVELCOMPLETE", new LevelCompleteState());
             AIE.StateManager.CreateState("GAMEOVER", new GameOverState());
 
@@ -143,10 +146,10 @@ namespace JumpyMcJumpMan
 
             camera.Position = player.Position - new Vector2(ScreenWidth / 2, ScreenHeight / 2);
 
-            //backgound = Content.Load<TiledMap>("Level3-background");
-           // map = Content.Load<TiledMap>("Level3");
+            level2Background = Content.Load<TiledMap>("Level2-background");
+            level2Map = Content.Load<TiledMap>("Level2");
             map = Content.Load<TiledMap>("Level1");
-            level1Background = Content.Load<TiledMap>("Level1-background");
+            background = Content.Load<TiledMap>("Level1-background");
 
             foreach (TiledTileLayer layer in map.TileLayers)
             {
@@ -275,7 +278,7 @@ namespace JumpyMcJumpMan
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if ("GAME" == AIE.StateManager.StateStackCurrent)
+            if ("GAME" == AIE.StateManager.StateStackCurrent || "LEVEL2" == AIE.StateManager.StateStackCurrent)
             {
                 player.Update(deltaTime);
                 CheckCollisions();
@@ -330,7 +333,7 @@ namespace JumpyMcJumpMan
                 if (lives > 0)
                 {
                     spriteBatch.Begin(transformMatrix: transformMatrix);
-                    level1Background.Draw(spriteBatch);
+                    background.Draw(spriteBatch);
                     player.Draw(spriteBatch);
                     foreach (Enemy e in enemies)
                     {
@@ -355,32 +358,63 @@ namespace JumpyMcJumpMan
                     goal.Draw(spriteBatch);
                     map.Draw(spriteBatch);
                     spriteBatch.End();
-
-                    //draw all the GUI compoments in a seperate SpriteBatch section
-                    if (lives > 0)
-                    {
-                        spriteBatch.Begin();
-
-                        spriteBatch.DrawString(agency_FB, "Score :" + score.ToString(), new Vector2(20, 20), Color.Gold);
-
-                        for (int i = 0; i < lives; i++)
-                        {
-                            spriteBatch.Draw(heart, new Vector2(ScreenWidth - 80 - i * 20, 20), Color.White);
-                            //spriteBatch.Draw(megaHeart, new Vector2(ScreenWidth - 80 - i * 20, 20), Color.White);
-                        }
-                        for (int i = 0; i < lives; i++)
-                        {
-                            spriteBatch.Draw(heart, new Vector2(ScreenWidth - 80 - i * 20, 20), Color.White);
-                            //spriteBatch.Draw(megaHeart, new Vector2(ScreenWidth - 80 - i * 20, 20), Color.White);
-                        }
-                        spriteBatch.End();
-                    }
                 }
-                else if (lives <= 0)
+            }
+
+            if ("LEVEL2" == AIE.StateManager.StateStackCurrent)
+            {
+                if (lives > 0)
                 {
-                    Reset();
-                    AIE.StateManager.PushState("GAMEOVER");
+                    spriteBatch.Begin(transformMatrix: transformMatrix);
+                    level2Background.Draw(spriteBatch);
+                    player.Draw(spriteBatch);
+                    foreach (Enemy e in enemies)
+                    {
+                        e.Draw(spriteBatch);
+                    }
+                    foreach (BronzeLootPile b in bronzeLootPiles)
+                    {
+                        b.Draw(spriteBatch);
+                    }
+                    foreach (SilverLootPile s in silverLootPiles)
+                    {
+                        s.Draw(spriteBatch);
+                    }
+                    foreach (GoldLootPile g in goldLootPiles)
+                    {
+                        g.Draw(spriteBatch);
+                    }
+                    foreach (HealthPack h in healthPacks)
+                    {
+                        h.Draw(spriteBatch);
+                    }
+                    goal.Draw(spriteBatch);
+                    level2Map.Draw(spriteBatch);
+                    spriteBatch.End();
                 }
+            }
+
+            if ("GAME" == AIE.StateManager.StateStackCurrent || "LEVEL2" == AIE.StateManager.StateStackCurrent)
+            {
+                spriteBatch.Begin();
+                spriteBatch.DrawString(agency_FB, "Score :" + score.ToString(), new Vector2(20, 20), Color.Gold);
+                for (int i = 0; i < lives; i++)
+                {
+                    spriteBatch.Draw(heart, new Vector2(ScreenWidth - 80 - i * 20, 20), Color.White);
+                    //spriteBatch.Draw(megaHeart, new Vector2(ScreenWidth - 80 - i * 20, 20), Color.White);
+                }
+                for (int i = 0; i < lives; i++)
+                {
+                    spriteBatch.Draw(heart, new Vector2(ScreenWidth - 80 - i * 20, 20), Color.White);
+                    //spriteBatch.Draw(megaHeart, new Vector2(ScreenWidth - 80 - i * 20, 20), Color.White);
+                }
+                spriteBatch.End();
+            }
+
+            else if (lives <= 0)
+            {
+                //Reset();
+                AIE.StateManager.PushState("GAMEOVER");
             }
 
             base.Draw(gameTime);
@@ -474,7 +508,7 @@ namespace JumpyMcJumpMan
             }
             if (IsColliding(player.Bounds, goal.Bounds) == true)
             {
-                Reset();
+                LoadLevel2();
                 AIE.StateManager.PushState("LEVELCOMPLETE");
             }
         }
@@ -501,7 +535,199 @@ namespace JumpyMcJumpMan
             goldLootPiles.Clear();
             healthPacks.Clear();
             megaHP.Clear();
-            foreach (TiledObjectGroup group in map.ObjectGroups)
+            if (currentLevel == 1)
+            {
+                foreach (TiledObjectGroup group in map.ObjectGroups)
+                {
+                    if (group.Name == "Enemies")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            Enemy enemy = new Enemy(this);
+                            enemy.Load(Content);
+                            enemy.Position = new Vector2(obj.X, obj.Y);
+                            enemies.Add(enemy);
+                        }
+                    }
+
+                    else if (group.Name == "Bronze")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            BronzeLootPile bronzeLootPile = new BronzeLootPile(this);
+                            bronzeLootPile.Load(Content);
+                            bronzeLootPile.Position = new Vector2(obj.X, obj.Y);
+                            bronzeLootPiles.Add(bronzeLootPile);
+                        }
+                    }
+
+                    else if (group.Name == "Silver")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            SilverLootPile silverLootPile = new SilverLootPile(this);
+                            silverLootPile.Load(Content);
+                            silverLootPile.Position = new Vector2(obj.X, obj.Y);
+                            silverLootPiles.Add(silverLootPile);
+                        }
+                    }
+
+                    else if (group.Name == "Gold")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            GoldLootPile goldLootPile = new GoldLootPile(this);
+                            goldLootPile.Load(Content);
+                            goldLootPile.Position = new Vector2(obj.X, obj.Y);
+                            goldLootPiles.Add(goldLootPile);
+                        }
+                    }
+
+                    else if (group.Name == "Healthpacks")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            HealthPack healthPack = new HealthPack(this);
+                            healthPack.Load(Content);
+                            healthPack.Position = new Vector2(obj.X, obj.Y);
+                            healthPacks.Add(healthPack);
+                        }
+                    }
+
+                    else if (group.Name == "Goal")
+                    {
+                        TiledObject obj = group.Objects[0];
+                        if (obj != null)
+                        {
+                            AnimatedTexture anim = new AnimatedTexture(Vector2.Zero, 0, 1, 1);
+                            anim.Load(Content, "chest", 1, 1);
+                            goal = new Sprite();
+                            goal.Add(anim, 0, 5);
+                            goal.position = new Vector2(obj.X, obj.Y);
+                        }
+                    }
+
+                    else if (group.Name == "PlayerSpawn")
+                    {
+                        TiledObject obj = group.Objects[0];
+                        if (obj != null)
+                        {
+                            player.Position = new Vector2(obj.X, obj.Y);
+                        }
+                    }
+                }
+            }
+            
+            if (currentLevel == 2)
+            {
+                foreach (TiledTileLayer layer in level2Map.TileLayers)
+                {
+                    if (layer.Name == "Collisions")
+                        collisionLayer = layer;
+                }
+
+                foreach (TiledObjectGroup group in level2Map.ObjectGroups)
+                {
+                    if (group.Name == "Enemies")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            Enemy enemy = new Enemy(this);
+                            enemy.Load(Content);
+                            enemy.Position = new Vector2(obj.X, obj.Y);
+                            enemies.Add(enemy);
+                        }
+                    }
+
+                    else if (group.Name == "Bronze")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            BronzeLootPile bronzeLootPile = new BronzeLootPile(this);
+                            bronzeLootPile.Load(Content);
+                            bronzeLootPile.Position = new Vector2(obj.X, obj.Y);
+                            bronzeLootPiles.Add(bronzeLootPile);
+                        }
+                    }
+
+                    else if (group.Name == "Silver")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            SilverLootPile silverLootPile = new SilverLootPile(this);
+                            silverLootPile.Load(Content);
+                            silverLootPile.Position = new Vector2(obj.X, obj.Y);
+                            silverLootPiles.Add(silverLootPile);
+                        }
+                    }
+
+                    else if (group.Name == "Gold")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            GoldLootPile goldLootPile = new GoldLootPile(this);
+                            goldLootPile.Load(Content);
+                            goldLootPile.Position = new Vector2(obj.X, obj.Y);
+                            goldLootPiles.Add(goldLootPile);
+                        }
+                    }
+
+                    else if (group.Name == "Healthpacks")
+                    {
+                        foreach (TiledObject obj in group.Objects)
+                        {
+                            HealthPack healthPack = new HealthPack(this);
+                            healthPack.Load(Content);
+                            healthPack.Position = new Vector2(obj.X, obj.Y);
+                            healthPacks.Add(healthPack);
+                        }
+                    }
+
+                    else if (group.Name == "Goal")
+                    {
+                        TiledObject obj = group.Objects[0];
+                        if (obj != null)
+                        {
+                            AnimatedTexture anim = new AnimatedTexture(Vector2.Zero, 0, 1, 1);
+                            anim.Load(Content, "chest", 1, 1);
+                            goal = new Sprite();
+                            goal.Add(anim, 0, 5);
+                            goal.position = new Vector2(obj.X, obj.Y);
+                        }
+                    }
+
+                    else if (group.Name == "PlayerSpawn")
+                    {
+                        TiledObject obj = group.Objects[0];
+                        if (obj != null)
+                        {
+                            player.Position = new Vector2(obj.X, obj.Y);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void LoadLevel2()
+        {
+            currentLevel = 2;
+            lives = 3;
+            score = 0;
+            megaHealth = 0;
+            enemies.Clear();
+            bronzeLootPiles.Clear();
+            silverLootPiles.Clear();
+            goldLootPiles.Clear();
+            healthPacks.Clear();
+            megaHP.Clear();
+
+            foreach (TiledTileLayer layer in level2Map.TileLayers)
+            {
+                if (layer.Name == "Collisions")
+                    collisionLayer = layer;
+            }
+
+            foreach (TiledObjectGroup group in level2Map.ObjectGroups)
             {
                 if (group.Name == "Enemies")
                 {
